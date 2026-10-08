@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Soya LingoLens",
+  "version": "0.3.0",
+  "description": "选中英文即可查看语境释义，并在侧边栏复习所有学习记录。",
+  "permissions": ["storage", "sidePanel", "contextMenus"],
+  "host_permissions": [
+    "https://api.mymemory.translated.net/*",
+    "https://translate.googleapis.com/*",
+    "https://api.dictionaryapi.dev/*",
+    "https://api.openai.com/*"
+  ],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": { "default_title": "打开 Soya LingoLens 复习侧边栏" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "options_page": "options.html",
+  "commands": {
+    "translate-selection": {
+      "suggested_key": { "default": "Alt+Shift+E", "mac": "Alt+Shift+E" },
+      "description": "翻译当前选中的英文"
+    }
+  }
+}
