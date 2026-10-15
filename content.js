@@ -1,91 +1,143 @@
 (function () {
   if (window.__lingoLensLoaded) return;
   window.__lingoLensLoaded = true;
-  let lastRange = null;
-  let lastText = "";
+  const policy = globalThis.LingoLensPolicy;
   let timer = null;
   let hoverTimer = null;
-  let prefetchTimer = null;
-  let hoverPrefetch = null;
   let hoverTarget = null;
+  let interaction = 0;
   const hoverHistory = new WeakMap();
 
-  document.addEventListener("mouseup", async (event) => {
-    if (event.target?.closest?.("input, textarea, [contenteditable='true']")) return;
+  function cancelPending() {
     clearTimeout(timer);
+    clearTimeout(hoverTimer);
+    hoverTarget = null;
+    interaction++;
+  }
+
+  function selectionSnapshot(event) {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount) return null;
+    const text = selection.toString().trim();
+    const range = selection.getRangeAt(0).cloneRange();
+    const path = event?.composedPath?.() || [];
+    if (!policy.isEnglishText(text) || policy.rangeIsExcluded(range) || path.some(policy.isExcluded)) return null;
+    return { text, range };
+  }
+
+  function snapshotIsCurrent(snapshot) {
+    const selection = window.getSelection();
+    const current = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    return snapshot.range.startContainer.isConnected && snapshot.range.endContainer.isConnected
+      && current?.startContainer === snapshot.range.startContainer && current?.endContainer === snapshot.range.endContainer
+      && current?.startOffset === snapshot.range.startOffset && current?.endOffset === snapshot.range.endOffset
+      && selection.toString().trim() === snapshot.text && !policy.rangeIsExcluded(snapshot.range);
+  }
+
+  document.addEventListener("mouseup", (event) => {
+    if (event.composedPath().some((node) => node.nodeName === "LINGOLENS-CARD")) return;
+    cancelPending();
+    const snapshot = selectionSnapshot(event);
+    if (!snapshot) return;
+    const token = interaction;
     timer = setTimeout(async () => {
-      const selection = window.getSelection();
-      const text = selection?.toString().trim();
-      if (!text || text.length > 5000 || !/[A-Za-z]/.test(text)) return;
-      lastText = text;
-      lastRange = selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
-      const settings = await chrome.storage.local.get("settings");
-      if (settings.settings?.autoTranslate === false) showTrigger();
-      else translate(text);
+      const { settings = {} } = await chrome.storage.local.get("settings");
+      if (token !== interaction || !policy.automaticAllowed(settings) || !snapshotIsCurrent(snapshot)) return;
+      if (settings.autoTranslate === false) showTrigger(snapshot);
+      else translate(snapshot, { automatic: true, token });
     }, 180);
   });
 
   document.addEventListener("mouseover", (event) => {
-    const target = event.target?.closest?.("a, button, [role='button'], [role='link'], [role='menuitem']");
+    const target = event.composedPath().find((node) => node.matches?.("a, button, [role='button'], [role='link'], [role='menuitem']"));
     if (!target || target === hoverTarget) return;
-    clearTimeout(hoverTimer);
-    clearTimeout(prefetchTimer);
-    hoverPrefetch = null;
-    hoverTarget = target;
+    cancelPending();
+    if (policy.isExcluded(target) || event.composedPath().some(policy.isExcluded)) return;
     const text = hoverLabel(target);
     if (!isLearnableHover(text)) return;
-    prefetchTimer = setTimeout(() => {
-      if (hoverTarget !== target || !target.matches(":hover")) return;
-      hoverPrefetch = requestTranslation(text, "", true, false);
-    }, 500);
+    hoverTarget = target;
+    const token = interaction;
+    // Wait for the visible intent threshold before making any request.
     hoverTimer = setTimeout(async () => {
-      if (hoverTarget !== target || !target.matches(":hover")) return;
+      const { settings = {} } = await chrome.storage.local.get("settings");
+      if (token !== interaction || !policy.automaticAllowed(settings) || hoverTarget !== target
+          || !target.isConnected || !target.matches(":hover") || policy.isExcluded(target) || hoverLabel(target) !== text) return;
       const previous = hoverHistory.get(target);
       if (previous?.text === text && Date.now() - previous.at < 30000) return;
       hoverHistory.set(target, { text, at: Date.now() });
-      lastText = text;
-      lastRange = null;
-      const rect = target.getBoundingClientRect();
-      const card = mount(rect, false, true);
-      const pending = hoverPrefetch || requestTranslation(text, "", true, false);
-      if (!hoverPrefetch) card.innerHTML = loadingTemplate(text, true);
-      const response = await pending;
-      if (hoverTarget !== target && !target.matches(":hover")) return card.getRootNode().host.remove();
+      const card = mount(target.getBoundingClientRect(), false, true);
+      card.innerHTML = loadingTemplate(text, true);
+      const response = await requestTranslation(text, "", true, false);
+      if (token !== interaction || !target.isConnected || !target.matches(":hover") || policy.isExcluded(target)) {
+        card.getRootNode().host.remove();
+        return;
+      }
       card.innerHTML = response.ok ? resultTemplate(text, response.result) : errorTemplate(response.error);
-      wireActions(card, response.result);
+      wireActions(card, text);
       if (response.ok) chrome.runtime.sendMessage({ type: "SAVE_RECORD", payload: response.result }).catch(() => {});
     }, 3000);
   }, true);
 
   document.addEventListener("mouseout", (event) => {
     if (!hoverTarget || (event.relatedTarget && hoverTarget.contains(event.relatedTarget))) return;
-    clearTimeout(hoverTimer);
-    clearTimeout(prefetchTimer);
-    hoverPrefetch = null;
-    hoverTarget = null;
+    cancelPending();
   }, true);
 
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === "TRANSLATE_SELECTED") {
-      const text = message.text || window.getSelection()?.toString().trim() || lastText;
-      if (text) translate(text);
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.settings) {
+      cancelPending();
+      document.querySelector("lingolens-card")?.remove();
     }
   });
 
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type !== "TRANSLATE_SELECTED") return;
+    cancelPending();
+    const active = document.activeElement;
+    if (active?.matches?.("input[type='password'], input[type='hidden']")) return;
+    const inputText = /^(INPUT|TEXTAREA)$/.test(active?.tagName) && typeof active.selectionStart === "number"
+      ? active.value.slice(active.selectionStart, active.selectionEnd) : "";
+    const selection = window.getSelection();
+    const text = (message.text || inputText || selection?.toString() || "").trim();
+    if (!text || text.length > 5000) return;
+    const range = selection?.rangeCount && selection.toString().trim() === text ? selection.getRangeAt(0).cloneRange() : null;
+    // Explicit manual invocation can translate draft text, but never its neighbours.
+    const editing = message.editable || policy.isEditable(active) || (range && policy.rangeIsExcluded(range));
+    translate({ text, range, selectedOnly: editing || !range }, { token: interaction });
+  });
+
   function contextAround(range, text) {
-    const container = range?.commonAncestorContainer;
-    const element = container?.nodeType === Node.ELEMENT_NODE ? container : container?.parentElement;
-    const block = element?.closest?.("article, [data-testid='tweetText'], p, li, blockquote, div");
-    return (block?.innerText || element?.innerText || text).trim().slice(0, 1500);
+    if (!range || policy.rangeIsExcluded(range)) return text;
+    const container = range.commonAncestorContainer;
+    const element = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+    const block = element?.closest?.("article, [data-testid='tweetText'], p, li, blockquote, div") || element;
+    if (!block || policy.isExcluded(block)) return text;
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    const parts = [];
+    let node;
+    let length = 0;
+    while ((node = walker.nextNode()) && length < 1500) {
+      if (!policy.isExcluded(node)) {
+        parts.push(node.textContent);
+        length += node.textContent.length;
+      }
+    }
+    const context = parts.join(" ").trim().slice(0, 1500);
+    return policy.isEnglishText(context) ? context : text;
   }
 
-  async function translate(text, anchorRect = null, suppliedContext = "", fastMode = false) {
-    const rect = anchorRect || lastRange?.getBoundingClientRect();
-    const card = mount(rect, false, fastMode);
-    card.innerHTML = loadingTemplate(text, fastMode);
-    const response = await requestTranslation(text, fastMode ? "" : (suppliedContext || contextAround(lastRange, text)), fastMode, true);
+  async function translate(snapshot, { automatic = false, token = interaction } = {}) {
+    if (automatic) {
+      const { settings = {} } = await chrome.storage.local.get("settings");
+      if (token !== interaction || !policy.automaticAllowed(settings) || !snapshotIsCurrent(snapshot)) return;
+    }
+    const { text, range, selectedOnly } = snapshot;
+    const card = mount(range?.getBoundingClientRect());
+    card.innerHTML = loadingTemplate(text);
+    const response = await requestTranslation(text, selectedOnly ? "" : contextAround(range, text), false, true);
+    if (token !== interaction || !card.isConnected) return;
     card.innerHTML = response.ok ? resultTemplate(text, response.result) : errorTemplate(response.error);
-    wireActions(card, response.result);
+    wireActions(card, text);
   }
 
   function requestTranslation(text, context, fastMode, save) {
@@ -95,11 +147,12 @@
     }).catch(() => ({ ok: false, error: "扩展连接中断，请刷新页面后重试" }));
   }
 
-  function showTrigger() {
-    const rect = lastRange?.getBoundingClientRect();
-    const card = mount(rect, true);
+  function showTrigger(snapshot) {
+    const card = mount(snapshot.range.getBoundingClientRect(), true);
     card.innerHTML = `<button class="ll-trigger" type="button">译 · 存</button>`;
-    card.querySelector("button").onclick = () => translate(lastText);
+    // Prevent button focus from replacing the selection before validating it.
+    card.querySelector("button").onmousedown = (event) => event.preventDefault();
+    card.querySelector("button").onclick = () => translate(snapshot, { automatic: true });
   }
 
   function mount(rect, compact = false, hoverCard = false) {
@@ -123,10 +176,10 @@
     else host?.remove();
   }
 
-  function wireActions(card, result) {
+  function wireActions(card, text) {
     card.querySelector("[data-close]")?.addEventListener("click", () => card.getRootNode().host.remove());
     card.querySelector("[data-speak]")?.addEventListener("click", () => {
-      speak(lastText);
+      speak(text);
     });
   }
 
@@ -151,7 +204,7 @@
   }
 
   function isLearnableHover(text) {
-    if (!text || text.length > 40 || !/^[A-Za-z][A-Za-z' .&-]*$/.test(text)) return false;
+    if (!policy.isEnglishText(text) || text.length > 40 || !/^[A-Za-z][A-Za-z' .&-]*$/.test(text)) return false;
     const words = text.split(/\s+/).filter(Boolean);
     return words.length >= 1 && words.length <= 4;
   }

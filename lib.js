@@ -3,9 +3,12 @@ export const DEFAULT_SETTINGS = {
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
   autoTranslate: true,
+  triggerMode: "smart",
   saveAutomatically: true,
   sendContext: true
 };
+
+let recordWrites = Promise.resolve();
 
 export const storage = {
   async settings() {
@@ -17,14 +20,21 @@ export const storage = {
     return records;
   },
   async saveRecord(record) {
+    const write = recordWrites.then(() => this.writeRecord(record));
+    recordWrites = write.catch(() => {});
+    return write;
+  },
+  async writeRecord(record) {
     const records = await this.records();
-    const key = normalize(record.text);
-    const existing = records.findIndex((item) => normalize(item.text) === key);
+    const key = recordIdentity(record);
+    const existing = records.findIndex((item) => recordIdentity(item) === key);
     const now = new Date().toISOString();
     if (existing >= 0) {
       records[existing] = {
         ...records[existing], ...record,
         id: records[existing].id,
+        favorite: records[existing].favorite,
+        mastered: records[existing].mastered,
         firstSeenAt: records[existing].firstSeenAt,
         updatedAt: now,
         seenCount: (records[existing].seenCount || 1) + 1
@@ -44,6 +54,11 @@ export const storage = {
     return existing >= 0 ? records[existing] : records[0];
   }
 };
+
+// Keep legacy records in place; their original context participates without migration.
+export function recordIdentity(record) {
+  return JSON.stringify([normalize(record.text), (record.context || "").trim().replace(/\s+/g, " ")]);
+}
 
 export function normalize(text = "") {
   return text.trim().replace(/\s+/g, " ").toLocaleLowerCase();

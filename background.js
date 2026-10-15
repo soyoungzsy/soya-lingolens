@@ -12,19 +12,19 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => 
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "lingolens-translate" && tab?.id) {
-    chrome.tabs.sendMessage(tab.id, { type: "TRANSLATE_SELECTED", text: info.selectionText });
+    chrome.tabs.sendMessage(tab.id, { type: "TRANSLATE_SELECTED", text: info.selectionText, editable: info.editable }).catch(() => {});
   }
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "translate-selection") return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: "TRANSLATE_SELECTED" });
+  if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: "TRANSLATE_SELECTED" }).catch(() => {});
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "SAVE_RECORD") {
-    storage.saveRecord(message.payload)
+    storage.settings().then((settings) => settings.saveAutomatically ? storage.saveRecord(message.payload) : null)
       .then((record) => sendResponse({ ok: true, record }))
       .catch((error) => sendResponse({ ok: false, error: readableError(error) }));
     return true;
@@ -42,11 +42,13 @@ async function translateAndSave(payload, tab) {
   if (!text) throw new Error("没有检测到选中的文字");
   const kind = classify(text);
   const context = settings.sendContext && !payload.fastMode ? (payload.context || "").slice(0, 1500) : "";
-  const cacheKey = `${settings.provider}:${payload.fastMode ? "fast" : "full"}:${text.toLocaleLowerCase()}`;
+  // v2 does not reuse ambiguous legacy keys. Existing user records stay untouched.
+  const cacheKey = `v2:${JSON.stringify([settings.provider, settings.provider === "openai" ? (settings.openaiModel || "gpt-4o-mini") : "", !!payload.fastMode, text, context])}`;
   const cached = await getCachedTranslation(cacheKey);
   if (cached) {
     const record = {
       text, kind, ...cached,
+      fastMode: !!payload.fastMode,
       context,
       pageTitle: payload.pageTitle || tab?.title || "",
       pageUrl: payload.pageUrl || tab?.url || ""
@@ -59,6 +61,7 @@ async function translateAndSave(payload, tab) {
     : await translateWithMyMemory({ text, kind, fastMode: !!payload.fastMode });
   const record = {
     text, kind, ...result,
+    fastMode: !!payload.fastMode,
     context: settings.sendContext ? context : "",
     pageTitle: payload.pageTitle || tab?.title || "",
     pageUrl: payload.pageUrl || tab?.url || ""
