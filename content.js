@@ -68,7 +68,7 @@
       const card = mount(target.getBoundingClientRect(), false, true);
       card.innerHTML = loadingTemplate(text, true);
       const response = await requestTranslation(text, "", true, false);
-      if (token !== interaction || !target.isConnected || !target.matches(":hover") || policy.isExcluded(target)) {
+      if (token !== interaction || !target.isConnected || !target.matches(":hover") || policy.isExcluded(target) || hoverLabel(target) !== text) {
         card.getRootNode().host.remove();
         return;
       }
@@ -112,17 +112,7 @@
     const element = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
     const block = element?.closest?.("article, [data-testid='tweetText'], p, li, blockquote, div") || element;
     if (!block || policy.isExcluded(block)) return text;
-    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-    const parts = [];
-    let node;
-    let length = 0;
-    while ((node = walker.nextNode()) && length < 1500) {
-      if (!policy.isExcluded(node)) {
-        parts.push(node.textContent);
-        length += node.textContent.length;
-      }
-    }
-    const context = parts.join(" ").trim().slice(0, 1500);
+    const context = policy.readingText(block);
     return policy.isEnglishText(context) ? context : text;
   }
 
@@ -198,7 +188,11 @@
   }
 
   function hoverLabel(element) {
-    const visible = (element.innerText || "").trim().replace(/\s+/g, " ");
+    // A wrapper's label must never include a nested draft or code editor.
+    if (policy.hasExcludedDescendant(element)) return "";
+    const text = policy.readingText(element);
+    if (text === null) return "";
+    const visible = text.replace(/\s+/g, " ");
     const aria = (element.getAttribute("aria-label") || "").trim();
     return visible || aria;
   }

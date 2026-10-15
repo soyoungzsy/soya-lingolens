@@ -118,9 +118,33 @@ with sync_playwright() as p, tempfile.TemporaryDirectory(prefix="lingolens-test-
         expect_selection("dynamic-word", True)
         expect_selection("dynamic-editor", False)
         expect_selection("safe-word", True)
-        check("context excludes editable neighbours", "SYNTHETIC_DRAFT_SENTINEL" not in worker.evaluate("calls.at(-1).body.messages[1].content"))
+        check("context excludes editable neighbours", "Confidential draft marker" not in worker.evaluate("calls.at(-1).body.messages[1].content"))
         expect_selection("isolated-ai", True)
         check("Chinese surrounding paragraph stays out of context", worker.evaluate("calls.at(-1).body.messages[1].content.endsWith('附近语境：AI')"))
+
+        expect_selection("visibility-word", True)
+        hidden_markers = ["ATTRHIDDENPHRASE", "DISPLAYHIDDENPHRASE", "NESTEDHIDDENPHRASE", "VISIBILITYHIDDENPHRASE", "VISIBLEOVERRIDEPHRASE", "COLLAPSEDHIDDENPHRASE", "OPACITYHIDDENPHRASE", "CONTENTHIDDENPHRASE", "ARIAHIDDENPHRASE", "OVERRIDEHIDDENPHRASE", "CLOSEDDETAILSPHRASE"]
+        prompt = worker.evaluate("calls.at(-1).body.messages[1].content")
+        saved = worker.evaluate("chrome.storage.local.get('records')")["records"][0]
+        for marker in hidden_markers:
+            check(f"hidden text never enters request or record: {marker}", marker not in prompt and marker not in saved["context"])
+        check("visible display contents text remains in context", "Visible context words." in prompt)
+
+        # Exercise the same policy in the synthetic page world for ancestor and
+        # bounded-work invariants; translation checks above use the real extension.
+        page.add_script_tag(path=str(ROOT / "trigger-policy.js"))
+        check("hidden ancestor outside reading block rejects context", page.evaluate("LingoLensPolicy.readingText(document.getElementById('hidden-ancestor'))===null"))
+        for css in ["display:none", "visibility:hidden", "opacity:0", "content-visibility:hidden"]:
+            blocked = page.evaluate("""css => {const parent=document.createElement('div');parent.style.cssText=css;const child=document.createElement('p');child.style.visibility='visible';child.textContent='Confidential ancestor draft';parent.append(child);document.body.append(parent);const result=LingoLensPolicy.readingText(child);parent.remove();return result===null;}""", css)
+            check(f"ancestor style protects a nested reading block: {css}", blocked)
+        bounded = page.evaluate("""() => {
+          const container=document.createElement('div');container.innerHTML='<span style="display:none">Confidential hidden draft</span>'.repeat(5000);document.body.append(container);
+          const original=window.getComputedStyle;let reads=0;window.getComputedStyle=(...args)=>{reads++;return original(...args);};
+          try{return {text:LingoLensPolicy.readingText(container),reads};}finally{window.getComputedStyle=original;container.remove();}
+        }""")
+        check("large hidden container yields no draft text", bounded["text"] == "")
+        check("context style reads stay within node budget", bounded["reads"] <= 500)
+        check("context character budget is enforced", page.evaluate("""() => {const p=document.createElement('p');p.textContent='Visible English words '.repeat(1000);document.body.append(p);const size=LingoLensPolicy.readingText(p).length;p.remove();return size<=1500;}"""))
 
         settings(autoTranslate=False)
         before = count()
@@ -151,6 +175,14 @@ with sync_playwright() as p, tempfile.TemporaryDirectory(prefix="lingolens-test-
             page.hover("#" + id)
             page.wait_for_timeout(3300)
             check(f"hover protected: {id}", count() == before)
+
+        for id in ["hover-editor-descendant", "hover-code-descendant", "hover-aria-descendant"]:
+            cleanup()
+            reset_cache()
+            before = count()
+            page.locator("#" + id).hover(position={"x": 5, "y": 5})
+            page.wait_for_timeout(3300)
+            check(f"outer padding never sends excluded descendant label: {id}", count() == before)
 
         cleanup()
         before = count()
@@ -194,7 +226,7 @@ with sync_playwright() as p, tempfile.TemporaryDirectory(prefix="lingolens-test-
         before = count()
         manual()
         check("shortcut message reads only selected input text", count() == before + 1 and worker.evaluate("calls.at(-1).body.messages[1].content.includes('选中内容：input\\n')"))
-        check("input manual translation excludes other draft text", "SYNTHETIC_DRAFT_SENTINEL" not in worker.evaluate("calls.at(-1).body.messages[1].content"))
+        check("input manual translation excludes other draft text", "Confidential draft marker" not in worker.evaluate("calls.at(-1).body.messages[1].content"))
         page.locator("#password").focus()
         page.locator("#password").evaluate("el=>el.select()")
         before = count()

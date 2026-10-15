@@ -17,12 +17,12 @@
   <pre id="pre">Read this code</pre><code id="code">English code label</code>
   <p id="nested">The river <em><span id="nested-word">bank</span></em> is near the village.</p>
   <p id="chinese-context">今天的主题是 <span id="isolated-ai">AI</span>，仅学习这个缩写</p>
-  <div id="safe-context">Read about <span id="safe-word">garden</span> in this English paragraph.<div contenteditable="true">SYNTHETIC_DRAFT_SENTINEL</div></div>
+  <div id="safe-context">Read about <span id="safe-word">garden</span> in this English paragraph.<div contenteditable="true">Confidential draft marker</div></div>
 </section>
 <section id="editors">
-  <input id="input" value="input draft SYNTHETIC_DRAFT_SENTINEL">
+  <input id="input" value="input draft Confidential draft marker">
   <input id="password" type="password" value="synthetic password fixture">
-  <textarea id="textarea">textarea draft SYNTHETIC_DRAFT_SENTINEL</textarea>
+  <textarea id="textarea">textarea draft Confidential draft marker</textarea>
   <div contenteditable=""><span id="empty-editor">Empty attribute draft</span></div>
   <div contenteditable="true"><p><span id="true-editor">Nested English draft</span></p><button id="editor-hover">Publish draft</button></div>
   <div contenteditable="plaintext-only"><span id="plain-editor">Plain text draft</span></div>
@@ -31,12 +31,29 @@
   <div class="ProseMirror"><span id="prose-editor">Document English draft</span></div>
   <div class="monaco-editor"><span id="monaco-editor">English code draft</span></div>
   <div data-slate-editor="true"><span id="slate-editor">Slate English draft</span></div>
-  <div id="manual-editor" contenteditable="true">Draft <span id="manual-word">approval</span> SYNTHETIC_DRAFT_SENTINEL</div>
+  <div id="manual-editor" contenteditable="true">Draft <span id="manual-word">approval</span> Confidential draft marker</div>
 </section>
 <section>
   <button id="hover">Learn more</button><button id="hover-mixed">发布 AI</button>
   <button id="dynamic-hover">Explore ideas</button><button id="manual-hover">Review later</button>
   <div id="cross"><span id="cross-start">Start reading </span><span contenteditable="true">hidden draft </span><span id="cross-end">finish reading</span></div>
 </section>
+<div id="hidden-context">Read about <span id="visibility-word">orchard</span> in this English paragraph.
+  <span hidden>ATTRHIDDENPHRASE</span>
+  <span style="display:none">DISPLAYHIDDENPHRASE</span>
+  <span style="display:none"><em><span>NESTEDHIDDENPHRASE</span></em></span>
+  <span style="visibility:hidden">VISIBILITYHIDDENPHRASE<span style="visibility:visible">VISIBLEOVERRIDEPHRASE</span></span>
+  <span style="visibility:collapse">COLLAPSEDHIDDENPHRASE</span>
+  <span style="opacity:0"><span>OPACITYHIDDENPHRASE</span></span>
+  <span style="content-visibility:hidden">CONTENTHIDDENPHRASE</span>
+  <span aria-hidden="true">ARIAHIDDENPHRASE</span>
+  <span hidden style="display:block">OVERRIDEHIDDENPHRASE</span>
+  <details><summary>Details</summary>CLOSEDDETAILSPHRASE</details>
+  <span style="display:contents">Visible context words.</span>
+</div>
+<div hidden><p id="hidden-ancestor">ANCESTORHIDDENPHRASE</p></div>
+<div id="hover-editor-descendant" role="button" style="padding:30px"><span contenteditable="">Confidential draft</span></div>
+<div id="hover-code-descendant" role="button" style="padding:30px"><code>Confidential code</code></div>
+<div id="hover-aria-descendant" role="button" style="padding:30px"><span role="textbox">Confidential note</span></div>
 <div id="dynamic"></div><div id="shadow-host"></div>
 </body></html>

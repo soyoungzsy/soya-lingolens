@@ -19,6 +19,48 @@
     return false;
   }
 
+  function hasExcludedDescendant(element) {
+    const candidates = element.querySelectorAll(`${editorSelector}, [contenteditable], pre, code, kbd, samp, script, style`);
+    return Array.from(candidates).some(isExcluded);
+  }
+
+  function hiddenSelf(element) {
+    if (element.hidden || element.hasAttribute("inert") || element.getAttribute("aria-hidden") === "true"
+        || (element.tagName === "DETAILS" && !element.open)) return true;
+    const style = element.ownerDocument.defaultView.getComputedStyle(element);
+    return style.display === "none" || /^(hidden|collapse)$/.test(style.visibility)
+      || Number(style.opacity) === 0 || style.contentVisibility === "hidden";
+  }
+
+  // Read at most 500 nodes / 1500 characters, pruning unsafe subtrees before
+  // reading their text. Only style reads are used; no per-text geometry scans.
+  function readingText(block, maxLength = 1500) {
+    let visited = 0;
+    for (let element = block; element; element = parentOf(element)) {
+      if (++visited > 500 || isExcluded(element) || hiddenSelf(element)) return null;
+    }
+    const parts = [];
+    let length = 0;
+    let node = block.firstChild;
+    while (node && visited++ < 500 && length < maxLength) {
+      let descend = false;
+      if (node.nodeType === 1) {
+        descend = !isExcluded(node) && !hiddenSelf(node);
+      } else if (node.nodeType === 3 && node.textContent.trim()) {
+        const part = node.textContent.slice(0, maxLength - length);
+        parts.push(part);
+        length += part.length + 1;
+      }
+      if (descend && node.firstChild) {
+        node = node.firstChild;
+        continue;
+      }
+      while (node !== block && !node.nextSibling) node = node.parentNode;
+      node = node === block ? null : node.nextSibling;
+    }
+    return parts.join(" ").trim().slice(0, maxLength);
+  }
+
   function isExcluded(node) {
     if (isEditable(node)) return true;
     for (let element = elementOf(node); element; element = parentOf(element)) {
@@ -55,5 +97,5 @@
     return settings.triggerMode !== "manual";
   }
 
-  root.LingoLensPolicy = Object.freeze({ isEditable, isExcluded, rangeIsExcluded, isEnglishText, automaticAllowed });
+  root.LingoLensPolicy = Object.freeze({ isEditable, isExcluded, hasExcludedDescendant, readingText, rangeIsExcluded, isEnglishText, automaticAllowed });
 })(globalThis);
