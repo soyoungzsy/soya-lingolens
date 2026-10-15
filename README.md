@@ -1,12 +1,14 @@
 # Soya LingoLens
 
 [![Chrome Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
-[![Version](https://img.shields.io/badge/version-0.3.0-176B52)](manifest.json)
+[![Version](https://img.shields.io/badge/version-0.3.1-176B52)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-D89324)](LICENSE)
 
 **在英文网页上保留原文阅读，选中或停留即可理解，并把真正遇到的英文沉淀成自己的复习记录。**
 
 Soya LingoLens 是一个面向中文母语学习者的 Chrome 英语伴读扩展，特别适合浏览 X/Twitter、英文资讯、博客和产品网站。它不会把整页英文替换成中文，而是在需要时显示轻量翻译卡，并在 Chrome 侧边栏保存学习记录。
+
+0.3.1 默认按选中文字判断：纯中文和中文主导的中英混排不自动触发；中文网页上的独立英文词句仍可使用。输入框、textarea、contenteditable 和常见网页编辑器默认不自动翻译。设置中的“仅手动”模式会同时关闭选词浮层与悬停请求，右键菜单和快捷键仍可显式翻译当前选文。
 
 当前版本可直接以“未打包扩展程序”方式安装，不需要构建、服务器或开发环境。
 
@@ -32,14 +34,14 @@ Soya LingoLens 是一个面向中文母语学习者的 Chrome 英语伴读扩展
 | 不认识一个单词 | 鼠标选中 | 显示中文释义、音标、词性、常用义、例句和朗读 |
 | 看不懂一句话或一段话 | 选中整句或段落 | 结合附近文本生成自然中文，保留英文原文 |
 | 按钮文字点了就会跳转 | 鼠标停留 3 秒 | 不触发点击，显示紧凑翻译卡 |
-| 再次遇到同一内容 | 选中或停留 | 优先读取 30 天本地缓存，减少等待 |
+| 再次遇到同一内容 | 选中或停留 | 按服务、模型、模式、原文和实际发送的语境读取 30 天缓存 |
 | 想回顾学过什么 | 打开扩展侧边栏 | 搜索、筛选、收藏、删除、标记掌握并返回来源页 |
 | 想听发音 | 点击播放按钮 | 优先调用系统中的美式女声 |
 
 其他能力：
 
 - 针对 X/Twitter 动态页面提取当前选区附近的推文语境。
-- 相同英文忽略大小写和多余空格去重，并累计遇见次数。
+- 相同英文与相同语境忽略多余空格去重；不同语境分别保留，并累计各自的遇见次数。
 - 自动记录原文、翻译、网页标题、来源链接和时间。
 - 支持右键菜单和 `Alt+Shift+E` 快捷键。
 - 页面浮层使用 Shadow DOM，尽量避免与网站样式冲突。
@@ -79,7 +81,7 @@ git clone https://github.com/soyoungzsy/soya-lingolens.git
 
 ### 翻译可点击的按钮
 
-把鼠标放在 1–4 个英文单词组成的按钮或链接上，停留满 3 秒。扩展会在约 0.5 秒后静默预取，到第 3 秒显示紧凑翻译卡，不会替你点击或跳转。
+把鼠标放在 1–4 个英文单词组成的按钮或链接上，停留满 3 秒。扩展等到第 3 秒才请求翻译并显示紧凑翻译卡，不会替你点击或跳转。
 
 常见按钮词使用内置词库；联网翻译会缓存 30 天，最多保留 1000 条缓存。
 
@@ -93,7 +95,7 @@ git clone https://github.com/soyoungzsy/soya-lingolens.git
 - 标记“已掌握”或恢复为“继续复习”。
 - 删除记录，或点击来源标题返回原网页。
 
-相同英文再次出现时不会创建重复卡片，而是增加“遇见次数”并更新最近来源。
+相同英文、相同语境再次出现时增加“遇见次数”并更新最近来源；同词不同语境分别保存，在侧边栏显示语境并支持搜索。旧记录、收藏、掌握状态和首次遇见时间会保留。已在旧版中被覆盖的语境无法自动恢复。
 
 ## 翻译模式、费用与隐私
 
@@ -113,7 +115,7 @@ git clone https://github.com/soyoungzsy/soya-lingolens.git
 
 OpenAI API 独立按实际用量收费，价格和账单由 OpenAI 管理。API Key 仅保存在本机 `chrome.storage.local`，不会写入源代码或发送给本项目作者。
 
-开启“发送附近段落”后，扩展会把选中文字附近最多约 1500 个字符一并发送给所选服务。关闭后只发送选中的英文。完整说明见 [PRIVACY.md](PRIVACY.md)。
+开启“发送附近英文阅读段落”后，OpenAI 模式会额外发送最多 1500 个字符的附近英文阅读文字，排除编辑区、代码、隐藏子树及隐藏祖先中的内容；中文主导的周边段落会回退为选文本身。免费翻译仅请求原选文及相应词典。关闭后仅发送选文。编辑区内右键/快捷键手动翻译始终仅发送选文，仍会保存来源标题和链接。包含可编辑或代码后代的悬停控件会整体跳过。完整说明见 [PRIVACY.md](PRIVACY.md)。
 
 ## Chrome 权限说明
 
@@ -125,7 +127,7 @@ OpenAI API 独立按实际用量收费，价格和账单由 OpenAI 管理。API 
 | `http://*/*`、`https://*/*` | 在英文网页中读取用户主动选中的文字并显示浮层 |
 | 翻译及词典域名 | 直接请求翻译、词典或可选 OpenAI 服务 |
 
-扩展不会主动上传完整浏览历史。只有触发翻译时，选中文字和用户允许的附近语境才会发送给翻译服务。
+扩展不会主动上传完整浏览历史。只有触发翻译时，选中文字和用户允许的附近语境才会发送给翻译服务。悬停必须持续 3 秒，提前离开不会预取。输入及编辑区默认不触发自动请求；请在敏感系统使用“仅手动”，或通过 Chrome 扩展详情限制网站访问权限。
 
 ## 数据如何保存
 
@@ -143,7 +145,7 @@ OpenAI API 独立按实际用量收费，价格和账单由 OpenAI 管理。API 
 git pull
 ```
 
-如果通过 ZIP 安装，请下载新版并覆盖原目录。更新文件后：
+如果通过 ZIP 安装，请将新版文件覆盖到 Chrome 当前加载的同一个绝对路径；务必复制新增的 `trigger-policy.js`。不要先卸载或重新在另一目录加载，以免改变扩展 ID、丢失现有存储入口。完整操作见 [更新指南](UPDATING.md)。更新文件后：
 
 1. 打开 `chrome://extensions/`。
 2. 在 Soya LingoLens 卡片上点击 **重新加载**。
@@ -154,6 +156,10 @@ git pull
 ## 常见问题
 
 ### 选中英文没有反应
+
+- 确认触发方式是“智能英文”；“仅手动”模式请用右键菜单或 `Alt+Shift+E`。
+- 纯中文、中文主导混排、空白、数字、标点、URL、邮箱、代码及常见代码标识符不自动处理。
+- 输入框、网页编辑器和代码块内不显示自动翻译卡或“译 · 存”按钮。手动操作可覆盖，编辑区仅发送选文。
 
 - 安装或重新加载扩展后，刷新当前网页。
 - 确认扩展已启用，并被允许访问当前网站。
@@ -179,7 +185,8 @@ git pull
 
 ```text
 manifest.json      Manifest V3 权限、入口和快捷键
-background.js      翻译服务、本地词库、缓存、去重与存储
+background.js      翻译服务、本地词库、语境与模型缓存
+trigger-policy.js  自动入口共用的选区语言及编辑区防护规则
 content.js         网页选区、悬停检测、X 语境提取和翻译浮层
 sidepanel.html     复习侧边栏结构
 sidepanel.js       搜索、收藏、删除、掌握状态和朗读
@@ -201,12 +208,18 @@ CONTRIBUTING.md    参与开发和提交规范
 提交代码前运行：
 
 ```bash
-node --check background.js
-node --check content.js
-node --check sidepanel.js
-node --check options.js
+npm run check
+npm test
 python3 -m json.tool manifest.json > /dev/null
+
+# 可选浏览器验收：需要 Python Playwright 与 Chrome for Testing
+# pip install playwright && python3 -m playwright install chromium
+npm run test:browser
+# 已安装的其他测试版 Chromium 可用 LINGOLENS_CHROMIUM 指定可执行文件
+npm run package
 ```
+
+`npm test` 无第三方依赖；浏览器脚本加载真实未打包扩展，使用临时 profile、合成中英文页面及离线翻译桩，不接触日常浏览器或真实工作内容。验收范围与限制见 [验证说明](VALIDATION.md)。
 
 至少手动验证：
 
@@ -223,13 +236,15 @@ python3 -m json.tool manifest.json > /dev/null
 
 ## 已知限制与路线图
 
-当前版本 `0.3.0` 是可用的早期版本，后续可考虑：
+当前版本 `0.3.1` 使用保守的英文形态规则（ASCII 字母占全部字母至少 80%；含其他文字时至少三个英文词），并非完整语言识别器；少量带中文注释的英文句子可触发，非英语拉丁字母文本也可能命中。含地址或代码符号的技术句子可能被跳过，可手动翻译。自定义编辑器无法保证全部识别，敏感页面请使用仅手动或限制网站访问。内容脚本仍只注入顶层网页，不覆盖跨域 iframe。
+
+后续可考虑：
 
 - 学习记录导入、导出与备份。
 - 可编辑的个人词义和学习笔记。
-- 可配置的悬停时间与网站白名单。
+- 可配置的悬停时间与更细的网站控制。
 - 更稳定的本地翻译或浏览器内置翻译能力。
-- 自动化测试和 Chrome Web Store 发布。
+- Chrome Web Store 发布。
 
 ## License
 

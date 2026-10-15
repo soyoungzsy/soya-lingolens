@@ -26,14 +26,14 @@ Bug 报告请尽量包含：
 ## 提交前检查
 
 ```bash
-node --check background.js
-node --check content.js
-node --check sidepanel.js
-node --check options.js
+npm run check
+npm test
 python3 -m json.tool manifest.json > /dev/null
 ```
 
 请同时在普通英文网页和 X/Twitter 上手动验证核心流程。
+
+浏览器回归使用 `npm run test:browser`：先在独立测试环境安装 Python Playwright 与 Chromium，或用 `LINGOLENS_CHROMIUM` 指定已安装的 Chrome for Testing。脚本使用临时 profile、合成页面和离线翻译桩，不应接入实际工作文档或用户日常 Chrome。`npm run package` 以固定白名单生成更新 ZIP，排除测试、Git 历史、凭证和本机数据。
 
 ## 安全与隐私
 

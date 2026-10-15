@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Soya LingoLens",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "选中英文即可查看语境释义，并在侧边栏复习所有学习记录。",
   "permissions": ["storage", "sidePanel", "contextMenus"],
   "host_permissions": [
@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "js": ["trigger-policy.js", "content.js"],
       "run_at": "document_idle",
       "all_frames": false
     }

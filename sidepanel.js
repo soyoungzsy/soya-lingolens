@@ -21,7 +21,7 @@ function render() {
   document.querySelector("#favorites").textContent = records.filter((r) => r.favorite).length;
   const q = queryEl.value.trim().toLowerCase();
   const filtered = records.filter((r) => {
-    const matches = !q || [r.text, r.translation, r.pageTitle, r.note].join(" ").toLowerCase().includes(q);
+    const matches = !q || [r.text, r.translation, r.pageTitle, r.note, r.context].join(" ").toLowerCase().includes(q);
     const category = filterEl.value === "all" || (filterEl.value === "favorite" ? r.favorite : !r.mastered);
     return matches && category;
   });
@@ -48,6 +48,12 @@ function recordNode(record) {
   node.querySelector(".note").textContent = note;
   node.querySelector(".note").hidden = !note;
   const source = node.querySelector(".source");
+  if (record.context && record.context.trim() !== record.text.trim()) {
+    const context = document.createElement("p");
+    context.className = "note";
+    context.textContent = `语境：${record.context}`;
+    source.before(context);
+  }
   source.textContent = record.pageTitle || safeHost(record.pageUrl);
   source.href = record.pageUrl || "#";
   node.querySelector(".master").textContent = record.mastered ? "继续复习" : "标为已掌握";
