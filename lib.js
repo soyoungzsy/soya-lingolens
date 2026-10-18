@@ -1,3 +1,4 @@
+import { mergeBackupRecords } from './record-backup.js';
 export const DEFAULT_SETTINGS = {
   provider: "mymemory",
   openaiApiKey: "",
@@ -21,6 +22,25 @@ export const storage = {
   },
   async saveRecord(record) {
     const write = recordWrites.then(() => this.writeRecord(record));
+    recordWrites = write.catch(() => {});
+    return write;
+  },
+  async changeRecord(id, values = null) {
+    const write = recordWrites.then(async () => {
+      const current = await this.records();
+      const records = values === null ? current.filter(r => r.id !== id) : current.map(r => r.id === id ? { ...r, favorite: values.favorite ?? r.favorite, mastered: values.mastered ?? r.mastered, updatedAt: new Date().toISOString() } : r);
+      await chrome.storage.local.set({ records }); return records;
+    });
+    recordWrites = write.catch(() => {}); return write;
+  },
+  async importRecords(incoming) {
+    const write = recordWrites.then(async () => {
+      const current = await this.records();
+      const merged = mergeBackupRecords(current, incoming);
+      await chrome.storage.local.set({ recordsBeforeImport: current });
+      await chrome.storage.local.set({ records: merged });
+      return merged;
+    });
     recordWrites = write.catch(() => {});
     return write;
   },

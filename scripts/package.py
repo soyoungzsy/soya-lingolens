@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
 version = manifest["version"]
 files = ["manifest.json", "background.js", "content.js", "trigger-policy.js", "lib.js",
-         "options.html", "options.js", "sidepanel.html", "sidepanel.js", "ui.css",
+         "record-backup.js", "README.en.md", "SOURCES.md", "MAINTENANCE.md", "OPEN_SOURCE_REVIEW.md", "options.html", "options.js", "sidepanel.html", "sidepanel.js", "ui.css",
          "README.md", "PRIVACY.md", "CHANGELOG.md", "UPDATING.md", "VALIDATION.md", "CONTRIBUTING.md", "LICENSE"]
 required = [manifest["background"]["service_worker"], manifest["options_page"], manifest["side_panel"]["default_path"]]
 required += [js for entry in manifest["content_scripts"] for js in entry["js"]]
