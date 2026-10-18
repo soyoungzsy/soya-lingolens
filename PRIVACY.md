@@ -14,7 +14,7 @@ The extension does not include analytics, advertising, a proprietary backend, or
 
 Do not use the extension on pages containing confidential company information, personal information, financial data, medical data, private email, or other sensitive content. Disable nearby-context sharing when it is not needed.
 
-### Automatic and manual triggers (0.3.1)
+### Automatic and manual triggers (0.4.0)
 
 Automatic selection, the selection button, and hover share a conservative English-text filter. Chinese-dominant selections, addresses, and code-like text are skipped regardless of the page's `lang`. Independent English words and sentences remain available on Chinese pages. This is a heuristic, not a complete language detector.
 
@@ -32,3 +32,5 @@ Uninstalling the extension or clearing its extension storage deletes locally sto
 
 Translation cache keys include provider, effective model, fast/full mode, exact selected text and the context actually sent (up to 1500 characters). Legacy ambiguous cache entries are not reused. Learning records are identified by text and context, retaining existing IDs, favorites, mastery state and first-seen dates when updating the same sense. No bulk record migration or deletion is performed. The existing 3000-record retention limit still applies to new saves; old senses already overwritten by earlier versions cannot be recovered automatically.
 
+
+备份恢复：侧边栏可导出学习记录，导入前显示数量并确认；相同词句和语境以当前笔记、收藏与复习状态为准，不覆盖已有条目。最多3000条、5MB；格式不对或容量不足会报错。导入前另存本机副本，服务密钥不导出。

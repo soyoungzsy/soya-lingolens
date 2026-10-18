@@ -1,3 +1,4 @@
+import { makeBackup, parseBackup } from './record-backup.js';
 import { storage, escapeHtml } from "./lib.js";
 
 const recordsEl = document.querySelector("#records");
@@ -13,6 +14,29 @@ chrome.storage.onChanged.addListener((changes) => {
   if (changes.records) { records = changes.records.newValue || []; render(); }
 });
 
+const backupStatus = document.querySelector('#backup-status');
+document.querySelector('#export-records').onclick = async () => {
+  try {
+    const text = makeBackup(await storage.records());
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'soya-lingolens-records.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    backupStatus.textContent = '已开始下载；请确认文件已保存。备份含原文、语境和来源网址，请妥善保管，不含服务密钥。';
+  } catch { backupStatus.textContent = '导出失败，请重试；当前记录未删除。'; }
+};
+document.querySelector('#import-records').onclick = () => document.querySelector('#backup-file').click();
+document.querySelector('#backup-file').onchange = async event => {
+  const file = event.target.files[0]; event.target.value = '';
+  if (!file) return;
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new Error('备份超过5MB。');
+    const incoming = parseBackup(await file.text());
+    if (!confirm('读取到' + incoming.length + '条备份记录。确认合并？现有相同词句与语境的记录保留，导入前另存一份本机备份。')) return;
+    records = await storage.importRecords(incoming); render();
+    backupStatus.textContent = '已合并备份；原有笔记、收藏和复习状态优先保留。';
+  } catch { backupStatus.textContent = '恢复未完成：请检查文件格式、大小和浏览器空间，原有记录不会被替换。'; }
+};
 async function init() { records = await storage.records(); render(); }
 
 function render() {
@@ -65,13 +89,13 @@ function recordNode(record) {
 }
 
 async function update(id, values) {
-  records = records.map((r) => r.id === id ? { ...r, ...values, updatedAt: new Date().toISOString() } : r);
-  await chrome.storage.local.set({ records }); render();
+  try { records = await storage.changeRecord(id, values); render(); }
+  catch { backupStatus.textContent = '保存失败，当前修改未完成；请检查浏览器空间后重试。'; }
 }
 
 async function remove(id) {
-  records = records.filter((r) => r.id !== id);
-  await chrome.storage.local.set({ records }); render();
+  try { records = await storage.changeRecord(id); render(); }
+  catch { backupStatus.textContent = '删除未完成，请稍后重试。'; }
 }
 
 function speak(text, audio) {

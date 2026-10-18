@@ -6,7 +6,7 @@
 
 This adds a small tool to Chrome on a computer. You do not need to write code. Test it with a few unimportant pages first.
 
-1. Click the green **Code** button above, then **Download ZIP**.
+1. Open the [fixed release](https://github.com/soyoungzsy/soya-lingolens/releases/tag/v0.4.0) and choose Source code (zip) under Assets.
 2. Find the ZIP in your Downloads folder and double-click to extract it. Keep the extracted folder: Chrome needs it later.
 3. Type `chrome://extensions` in Chrome’s address bar, press Enter and turn on **Developer mode** at the top right. This is Chrome’s route for installing a local extension; coding knowledge is not required.
 4. Click **Load unpacked** and select the extracted folder containing `manifest.json` directly. Choose the folder, not an individual file.
@@ -24,7 +24,7 @@ You can skip the configuration and code details below. Use the **Issues** tab ab
 
 Read English websites without replacing the original text: translate selected words or passages, explain short hovered controls, and retain encountered text for review in a Chrome side panel.
 
-[中文](README.md) · Source version: 0.3.1 · [Privacy](PRIVACY.md) · [Updating](UPDATING.md)
+[中文](README.md) · Source version: 0.4.0 · [Privacy](PRIVACY.md) · [Updating](UPDATING.md)
 
 ## Why and for whom
 
@@ -54,7 +54,7 @@ Default translation uses Google Translate public endpoints with MyMemory fallbac
 
 Optional OpenAI mode needs your API key and model in Settings and incurs your provider's charges. The key is stored in local extension storage, not sent to this project's author. With nearby-context sharing enabled, up to 1,500 characters of nearby English may accompany the selection; editing/code/hidden content is filtered heuristically. Explicit translation inside an editor sends only the selection, but still stores the source title and URL. Free translation requests selected text and related dictionary data, not the surrounding paragraph. Read [PRIVACY.md](PRIVACY.md) before enabling network translation.
 
-`storage`, `sidePanel` and `contextMenus` support local records and UI. Broad HTTP/HTTPS page access enables selection cards; restrict site access in Chrome for sensitive sites. This project has no developer telemetry/backend, but translation text is sent to the configured third-party services. Local records retain source titles/URLs. Up to 3,000 records and 1,000 cached translations are kept; cache lifetime is 30 days. There is no export, import or cross-device sync. Uninstalling or clearing extension data deletes records.
+`storage`, `sidePanel` and `contextMenus` support local records and UI. Broad HTTP/HTTPS page access enables selection cards; restrict site access in Chrome for sensitive sites. This project has no developer telemetry/backend, but translation text is sent to the configured third-party services. Local records retain source titles/URLs. Up to 3,000 records and 1,000 cached translations are kept; cache lifetime is 30 days. Use the sidebar to export a JSON backup and merge it back after reinstalling or changing computers. There is no automatic cross-device sync. Uninstalling or clearing extension data deletes local records unless you have a saved backup.
 
 ## Update, recover and troubleshoot
 
@@ -63,3 +63,11 @@ Back up the current source directory, keep the same loading path and extension I
 No card: check mode, site access, supported page type and refresh after installation. Hover requires three seconds on a short English control. Network failure: check access to your selected provider, then its key/model/balance where applicable. Available English speech voices depend on the OS and Chrome.
 
 Development commands: `npm run check`, `npm test`, optional `npm run test:browser`, and `npm run package`. Browser checks require the tooling described in [VALIDATION.md](VALIDATION.md). Prior validation statements in that document are not new test results from this documentation proposal. See [maintenance](MAINTENANCE.md), [contribution rules](CONTRIBUTING.md), [changes](CHANGELOG.md) and [MIT license](LICENSE).
+
+## Sources and acknowledgements
+
+See [sources](SOURCES.md) for original authors, references, dependencies and licenses. AI rewriting does not establish original authorship; required third-party notices remain in applicable downloads.
+
+Backup recovery: export records from the sidebar, then confirm the record count before importing. Existing records and review state win for matching text/context. Imports are limited to 3000 records and 5MB, validated before writing, and preceded by a local backup. Service credentials are not exported.
+
+Version: 0.4.0 · [Release / 固定下载](https://github.com/soyoungzsy/soya-lingolens/releases/tag/v0.4.0)

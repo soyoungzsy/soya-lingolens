@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 — 2026-10-18
+
+- 新增学习记录导出与校验后合并恢复、导入前备份，串行处理记录写入；打包加入英文说明、维护与来源声明。
+- Publish a fixed version with plain-language onboarding, reviewed source attribution and maintenance evidence.
+
 ## 0.3.1 — 2026-10-15
 
 - 自动入口统一按选中文字判断；中文和中文主导的中英混排不自动触发，中文网页的独立英文词句仍可用。忽略空白、数字、标点、地址、邮箱及常见代码片段。

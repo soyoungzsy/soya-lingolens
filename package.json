@@ -1,11 +1,11 @@
 {
   "name": "soya-lingolens",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check background.js && node --check content.js && node --check trigger-policy.js && node --check lib.js && node --check sidepanel.js && node --check options.js",
+    "check": "node --check background.js && node --check content.js && node --check trigger-policy.js && node --check lib.js && node --check sidepanel.js && node --check options.js && node --check record-backup.js",
     "test:browser": "python3 tests/browser.py",
     "package": "python3 scripts/package.py"
   }
