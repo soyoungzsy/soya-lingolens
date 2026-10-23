@@ -36,6 +36,7 @@
 <section>
   <button id="hover">Learn more</button><button id="hover-mixed">发布 AI</button>
   <button id="dynamic-hover">Explore ideas</button><button id="manual-hover">Review later</button>
+  <button id="rename-trigger">Rename item</button><span id="rename-editor" contenteditable="true" hidden>https://example.com/rename-me</span>
   <div id="cross"><span id="cross-start">Start reading </span><span contenteditable="true">hidden draft </span><span id="cross-end">finish reading</span></div>
 </section>
 <div id="hidden-context">Read about <span id="visibility-word">orchard</span> in this English paragraph.
@@ -56,4 +57,15 @@
 <div id="hover-code-descendant" role="button" style="padding:30px"><code>Confidential code</code></div>
 <div id="hover-aria-descendant" role="button" style="padding:30px"><span role="textbox">Confidential note</span></div>
 <div id="dynamic"></div><div id="shadow-host"></div>
+<script>
+document.getElementById('rename-trigger').addEventListener('click', () => {
+  const editor = document.getElementById('rename-editor');
+  editor.hidden = false;
+  editor.focus();
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+});
+</script>
 </body></html>

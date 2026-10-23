@@ -167,7 +167,12 @@
   }
 
   function wireActions(card, text) {
-    card.querySelector("[data-close]")?.addEventListener("click", () => card.getRootNode().host.remove());
+    const closeButton = card.querySelector("[data-close]");
+    closeButton?.addEventListener("mousedown", (event) => event.preventDefault());
+    closeButton?.addEventListener("click", () => {
+      cancelPending();
+      card.getRootNode().host.remove();
+    });
     card.querySelector("[data-speak]")?.addEventListener("click", () => {
       speak(text);
     });
